@@ -92,6 +92,12 @@ type SecretService struct {
 }
 
 type Collection struct {
+	Items    []dbus.ObjectPath // items in the collection
+	Private  string            // specifies whether the collection is private or not
+	Label    string            //  The displayable label of this collection.
+	Locked   string            //  Whether the collection is locked and must be authenticated by the client application.
+	Created  uint64            //  The unix time when the collection was created.
+	Modified uint64            //  The unix time when the collection was last modified.
 }
 
 // deletes the collection
@@ -113,11 +119,11 @@ func (c *Collection) SearchItems(attr map[string]string) ([]dbus.ObjectPath, *db
 Creates a new item in the collection with the properties defined in 'props'.
 Returns the items dbus object path, as well as a path to a dbus prompt
 
-	:param props: a map of properties to assign to the item
+	:param fields: a map of properties to assign to the item. Will be used to match during lookups
 	:param secret: the secret to encode into the collection
 	:param replace: replace secret if a matching one is found in the store
 */
-func (c *Collection) CreateItem(props map[string]dbus.Variant, secret SecretStruct, replace bool) (dbus.ObjectPath, dbus.ObjectPath) {
+func (c *Collection) CreateItem(fields map[string]string, secret SecretStruct, replace bool) (dbus.ObjectPath, dbus.ObjectPath) {
 	return dbus.ObjectPath("/"), dbus.ObjectPath("/")
 }
 
