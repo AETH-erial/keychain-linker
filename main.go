@@ -17,7 +17,7 @@ func main() {
 	defer conn.Close()
 
 	path := "/dev/aetherial/KeychainLinker"
-	session := &keychainlinker.SecretService{SessionBase: "/dev/aetherial/KeychainLinker/session/",
+	session := &keychainlinker.Service{SessionBase: "/dev/aetherial/KeychainLinker/session/",
 		CollectionBase: "/dev/aetherial/KeychainLinker/collection/",
 		Collections:    []dbus.ObjectPath{}}
 
