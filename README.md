@@ -6,7 +6,7 @@ API Reference: https://specifications.freedesktop.org/secret-service-spec/latest
 todos  
 - [x] implement org.freedesktop.Secret.Service 
 - [x] implement org.freedesktop.Secret.Collection   
-- [] implement org.freedesktop.Secret.Item  
+- [ ] implement org.freedesktop.Secret.Item  
 - [x] implement org.freedesktop.Secret.Session   
 - [x] implementorg.freedesktop.Secret.Prompt  
-- [] PoC write/read bridge for vaultwarden 
+- [ ] PoC write/read bridge for vaultwarden 
