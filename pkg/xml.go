@@ -6,7 +6,46 @@ import (
 
 const DbusAdv = `
 <node>
-	<interface name="dev.aetherial.git.KeychainLinker.Service">
+	  <interface name="org.freedesktop.Secret.Collection">
+
+		<property name="Label" type="s" access="readwrite"/>
+		<property name="Locked" type="b" access="read"/>
+		<property name="Created" type="u" access="read"/>
+		<property name="Modified" type="u" access="read"/>
+		<property name="Items" type="ao" access="read"/>
+
+		<method name="Delete">
+		  <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+		</method>
+
+		<method name="SearchItems">
+		  <arg name="attributes" type="a{ss}" direction="in"/>
+		  <arg name="unlocked" type="ao" direction="out"/>
+		  <arg name="locked" type="ao" direction="out"/>
+		</method>
+
+		<method name="CreateItem">
+		  <arg name="properties" type="a{sv}" direction="in"/>
+		  <arg name="secret" type="(oayays)" direction="in"/>
+		  <arg name="replace" type="b" direction="in"/>
+		  <arg name="item" type="o" direction="out"/>
+		  <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+		</method>
+
+		<signal name="ItemCreated">
+		  <arg name="item" type="o"/>
+		</signal>
+
+		<signal name="ItemDeleted">
+		  <arg name="item" type="o"/>
+		</signal>
+
+		<signal name="ItemChanged">
+		  <arg name="item" type="o"/>
+		</signal>
+	</interface>
+
+	<interface name="org.freedesktop.Secret.Service">
 		<method name="OpenSession">
 		  <arg name="algorithm" type="s" direction="in"/>
 		  <arg name="input" type="v" direction="in"/>

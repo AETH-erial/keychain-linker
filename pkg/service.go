@@ -3,18 +3,79 @@ package keychainlinker
 import (
 	"fmt"
 	"path"
+	"strconv"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 )
+
+const DEFAULT_COLLECTION = "/org/freedesktop/secrets/aliases/default"
+
+type Cache struct {
+	Collections map[dbus.ObjectPath]Collection
+}
 
 type Service struct {
 	/*
 		Working on implementing the org.freedesktop.Secret.Service interface, from their v0.2 spec:
 		https://specifications.freedesktop.org/secret-service-spec/latest-single/#org.freedesktop.Secret.Service
 	*/
+	Cache          map[dbus.ObjectPath]*Collection
 	Collections    []dbus.ObjectPath
+	PathCount      int
+	Alias          map[string]dbus.ObjectPath
 	SessionBase    string // e.g. "/org/freedesktop/secrets/session/"
 	CollectionBase string // e.g. "/org/freedesktop/secrets/collection/"
+}
+
+/*
+implementing the properties interface
+func (s *Service) Get(iface, property string) (dbus.Variant, *dbus.Error) {
+
+		if iface == "org.freedesktop.Secret.Service" && property == "Collections" {
+			return dbus.MakeVariant(s.Collections), nil
+		}
+		return dbus.Variant{}, dbus.MakeFailedError(fmt.Errorf("no such property"))
+	}
+
+	func (s *Service) GetAll(iface string) (map[string]dbus.Variant, *dbus.Error) {
+		if iface == "org.freedesktop.Secret.Service" {
+			return map[string]dbus.Variant{
+				"Collections": dbus.MakeVariant(s.Collections),
+			}, nil
+		}
+		return nil, dbus.MakeFailedError(fmt.Errorf("no such interface"))
+	}
+
+/*
+Create a new service interface
+*/
+func NewService(base dbus.ObjectPath) *Service {
+	return &Service{
+		Cache: map[dbus.ObjectPath]*Collection{
+			DEFAULT_COLLECTION: {
+				Items: []dbus.ObjectPath{
+					"/",
+				},
+				Label:     "default",
+				Cache:     map[dbus.ObjectPath]CacheItem{},
+				PathCount: 0,
+				PathBase:  fmt.Sprintf("%s/collection/default", base),
+				Private:   "true",
+				Created:   uint64(time.Now().Unix()),
+				Modified:  uint64(time.Now().Unix()),
+			},
+		},
+		Collections: []dbus.ObjectPath{
+			DEFAULT_COLLECTION,
+		},
+		PathCount: 0,
+		Alias: map[string]dbus.ObjectPath{
+			"default": DEFAULT_COLLECTION,
+		},
+		SessionBase:    fmt.Sprintf("%s/session", base),
+		CollectionBase: fmt.Sprintf("%s/collection", base),
+	}
 }
 
 /*
@@ -27,8 +88,8 @@ func (s *Service) OpenSession(algorithm string, input dbus.Variant) (dbus.Varian
 	if algorithm != "PLAIN" {
 		return dbus.Variant{}, "/", dbus.MakeFailedError(fmt.Errorf("only PLAIN is supported"))
 	}
-
 	sessionPath := dbus.ObjectPath(path.Join(s.SessionBase, "1"))
+	fmt.Println(sessionPath)
 	return input, sessionPath, nil
 }
 
@@ -39,8 +100,10 @@ Creates a collection with the Service object
 	:param alias: the shortname of the collection
 */
 func (s *Service) CreateCollection(properties map[string]dbus.Variant, alias string) (dbus.ObjectPath, dbus.ObjectPath, *dbus.Error) {
-	collPath := dbus.ObjectPath(path.Join(s.CollectionBase, "login"))
+	collPath := dbus.ObjectPath(path.Join(s.CollectionBase, strconv.Itoa(s.PathCount+1)))
 	s.Collections = append(s.Collections, collPath)
+	s.PathCount = s.PathCount + 1
+	s.Alias[alias] = collPath
 	return collPath, "/", nil
 }
 
@@ -51,7 +114,16 @@ search for items in the keychain that satisfy 'attrs'
 */
 func (s *Service) SearchItems(attrs map[string]string) ([]dbus.ObjectPath, []dbus.ObjectPath, *dbus.Error) {
 	// Just return empty results for now
-	return []dbus.ObjectPath{}, []dbus.ObjectPath{}, nil
+	found := []dbus.ObjectPath{}
+	for _, v := range s.Cache {
+		f, err := v.SearchItems(attrs)
+		if err != nil {
+			return []dbus.ObjectPath{}, []dbus.ObjectPath{}, err
+		}
+		found = append(found, f...)
+
+	}
+	return found, []dbus.ObjectPath{}, nil
 }
 
 /*
@@ -88,7 +160,11 @@ Return a collection based on the alias name
 	:param name: the alias to search for
 */
 func (s *Service) ReadAlias(name string) (dbus.ObjectPath, *dbus.Error) {
-	return dbus.ObjectPath(""), nil
+	objectPath, ok := s.Alias[name]
+	if !ok {
+		return dbus.ObjectPath("/"), &dbus.ErrMsgNoObject
+	}
+	return objectPath, nil
 
 }
 
@@ -99,6 +175,7 @@ set the alias of the passed in collection
 	:param collection: the collection to modify
 */
 func (s *Service) SetAlias(name string, collection dbus.ObjectPath) *dbus.Error {
+	s.Alias[name] = collection
 	return nil
 
 }

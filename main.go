@@ -16,16 +16,16 @@ func main() {
 	}
 	defer conn.Close()
 
-	path := "/dev/aetherial/KeychainLinker"
-	session := &keychainlinker.Service{SessionBase: "/dev/aetherial/KeychainLinker/session/",
-		CollectionBase: "/dev/aetherial/KeychainLinker/collection/",
-		Collections:    []dbus.ObjectPath{}}
+	path := "/org/freedesktop/secrets"
+	service := keychainlinker.NewService(dbus.ObjectPath(path))
 
-	conn.Export(session, dbus.ObjectPath(path), "dev.aetherial.git.KeychainLinker.Service")
+	conn.Export(service, dbus.ObjectPath(path), "org.freedesktop.Secret.Service")
+	conn.Export(service.Cache["/org/freedesktop/secrets/collection/default"], "/org/freedesktop/secrets/collection/default", "org.freedesktop.DBus.Properties")
+
 	conn.Export(introspect.Introspectable(keychainlinker.DbusAdv), dbus.ObjectPath(path),
 		"org.freedesktop.DBus.Introspectable")
-
-	reply, err := conn.RequestName("dev.aetherial.git.KeychainLinker.Service",
+	conn.Export(introspect.Introspectable(keychainlinker.DbusAdv), "/org/freedesktop/secrets/collection/default", "org.freedesktop.DBus.Introspectable")
+	reply, err := conn.RequestName("org.freedesktop.secrets",
 		dbus.NameFlagDoNotQueue)
 	if err != nil {
 		panic(err)
@@ -34,6 +34,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "name already taken")
 		os.Exit(1)
 	}
-	fmt.Println("Listening on dev.aetherial.git.KeychainLinker.Service / /dev/aetherial/git/KeychainLinker/Service ...")
+	fmt.Println("Listening on org.freedesktop.secrets / /org/freedesktop/secrets ...")
 	select {}
 }
